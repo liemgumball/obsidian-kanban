@@ -1,3 +1,7 @@
+// Stub signatures mirror the real API, so parameters are named but unused.
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 /**
  * Stand-in for the `obsidian` module. The parser layer imports only YAML
  * helpers, moment, and a few names it uses purely as types or base classes;

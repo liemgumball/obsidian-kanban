@@ -1,17 +1,10 @@
 import update from 'immutability-helper';
+import { generateInstanceId } from 'src/components/helpers';
 import type { Board, Lane } from 'src/components/types';
 import { LaneTemplate } from 'src/components/types';
-import { generateInstanceId } from 'src/components/helpers';
 import { getTaskStatusDone } from 'src/parsers/helpers/inlineMetadata';
 
-import {
-  BoardError,
-  createItem,
-  findCard,
-  findLane,
-  insertionIndex,
-  reviseItem,
-} from './board';
+import { BoardError, createItem, findCard, findLane, insertionIndex, reviseItem } from './board';
 
 export interface LaneListing {
   title: string;
@@ -29,10 +22,7 @@ export function listBoard(board: Board): LaneListing[] {
   }));
 }
 
-export function addCard(
-  board: Board,
-  args: { lane: string; text: string; pos?: number }
-): Board {
+export function addCard(board: Board, args: { lane: string; text: string; pos?: number }): Board {
   const { index: laneIndex, lane } = findLane(board, args.lane);
   const at = insertionIndex(lane.children.length, args.pos);
 
@@ -41,10 +31,7 @@ export function addCard(
   });
 }
 
-export function editCard(
-  board: Board,
-  args: { lane: string; index: number; text: string }
-): Board {
+export function editCard(board: Board, args: { lane: string; index: number; text: string }): Board {
   const { laneIndex, item } = findCard(board, args.lane, args.index);
 
   return update(board, {

@@ -1,5 +1,6 @@
 import builtins from 'builtin-modules';
 import esbuild from 'esbuild';
+import { chmodSync } from 'fs';
 import path from 'path';
 import process from 'process';
 import { fileURLToPath } from 'url';
@@ -22,15 +23,22 @@ export const cliAlias = {
 const entry = process.argv[2] ?? 'src/cli/index.ts';
 const outfile = process.argv[3] ?? 'kanban-cli.js';
 
+const out = path.resolve(root, outfile);
+
 await esbuild.build({
   entryPoints: [path.resolve(root, entry)],
-  outfile: path.resolve(root, outfile),
+  outfile: out,
   bundle: true,
   platform: 'node',
   target: 'node16',
   format: 'cjs',
   alias: cliAlias,
+  // Must run before any plugin module: some read `window` or `app` while
+  // they load. Mirrors `setupFiles` in vitest.config.ts.
+  inject: [shim('globals.ts')],
   external: [...builtins],
   banner: { js: '#!/usr/bin/env node' },
   logLevel: 'info',
 });
+
+chmodSync(out, 0o755);

@@ -1,0 +1,186 @@
+import { BoardError, loadBoard, saveBoard } from './board';
+import {
+  addCard,
+  addLane,
+  editCard,
+  listBoard,
+  moveCard,
+  removeCard,
+  removeLane,
+  setDone,
+} from './commands';
+
+const usage = `kanban — edit Obsidian Kanban boards from the shell
+
+  kanban list <file.md> [--json]
+  kanban add  <file.md> --lane <name> --text <text> [--pos <n>]
+  kanban edit <file.md> --lane <name> --index <n> --text <text>
+  kanban move <file.md> --lane <name> --index <n> --to <lane> [--pos <n>]
+  kanban done <file.md> --lane <name> --index <n> [--undo]
+  kanban rm   <file.md> --lane <name> --index <n>
+  kanban lane add <file.md> --name <name> [--pos <n>]
+  kanban lane rm  <file.md> --name <name>`;
+
+class UsageError extends Error {}
+
+type Flags = Record<string, string | boolean>;
+
+function parseFlags(args: string[]): Flags {
+  const flags: Flags = {};
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    if (!arg.startsWith('--')) throw new UsageError(`Unexpected argument "${arg}"`);
+
+    const name = arg.slice(2);
+    const next = args[i + 1];
+
+    if (next === undefined || next.startsWith('--')) {
+      flags[name] = true;
+    } else {
+      flags[name] = next;
+      i++;
+    }
+  }
+
+  return flags;
+}
+
+function str(flags: Flags, name: string): string {
+  const value = flags[name];
+  if (typeof value !== 'string') throw new UsageError(`Missing --${name}`);
+  return value;
+}
+
+function int(flags: Flags, name: string): number {
+  const value = str(flags, name);
+  if (!/^\d+$/.test(value)) throw new UsageError(`--${name} must be a non-negative integer`);
+  return Number(value);
+}
+
+function optionalInt(flags: Flags, name: string): number | undefined {
+  return flags[name] === undefined ? undefined : int(flags, name);
+}
+
+function indent(title: string): string {
+  return title.split('\n').join('\n       ');
+}
+
+function formatListing(board: ReturnType<typeof listBoard>): string {
+  return board
+    .map((lane) => {
+      const header = `## ${lane.title}`;
+      if (!lane.cards.length) return `${header}\n  (empty)`;
+
+      const cards = lane.cards.map(
+        (card) =>
+          `  ${String(card.index).padStart(2)} [${card.done ? 'x' : ' '}] ${indent(card.title)}`
+      );
+
+      return [header, ...cards].join('\n');
+    })
+    .join('\n\n');
+}
+
+function run(argv: string[]): string {
+  const [command, ...rest] = argv;
+
+  if (!command || command === '--help' || command === '-h') return usage;
+
+  if (command === 'lane') {
+    const [sub, file, ...args] = rest;
+    if (!file) throw new UsageError('Missing board file');
+    const flags = parseFlags(args);
+
+    if (sub === 'add') {
+      const name = str(flags, 'name');
+      const pos = optionalInt(flags, 'pos');
+      const board = addLane(loadBoard(file), { name, pos });
+      saveBoard(file, board);
+      return `Added lane "${name}" at ${board.children.findIndex((l) => l.data.title === name)}`;
+    }
+
+    if (sub === 'rm') {
+      const name = str(flags, 'name');
+      const loaded = loadBoard(file);
+      const cards = loaded.children.find((l) => l.data.title === name)?.children.length ?? 0;
+      saveBoard(file, removeLane(loaded, { name }));
+      return `Removed lane "${name}" and ${cards} card${cards === 1 ? '' : 's'}`;
+    }
+
+    throw new UsageError(`Unknown lane subcommand "${sub ?? ''}"`);
+  }
+
+  const [file, ...args] = rest;
+  if (!file) throw new UsageError('Missing board file');
+  const flags = parseFlags(args);
+
+  switch (command) {
+    case 'list': {
+      const listing = listBoard(loadBoard(file));
+      return flags.json ? JSON.stringify(listing, null, 2) : formatListing(listing);
+    }
+
+    case 'add': {
+      const lane = str(flags, 'lane');
+      const board = addCard(loadBoard(file), {
+        lane,
+        text: str(flags, 'text'),
+        pos: optionalInt(flags, 'pos'),
+      });
+      saveBoard(file, board);
+      const at = board.children.find((l) => l.data.title === lane).children.length - 1;
+      return `Added card to "${lane}" (${flags.pos === undefined ? at : flags.pos})`;
+    }
+
+    case 'edit': {
+      const lane = str(flags, 'lane');
+      const index = int(flags, 'index');
+      saveBoard(file, editCard(loadBoard(file), { lane, index, text: str(flags, 'text') }));
+      return `Edited card ${index} in "${lane}"`;
+    }
+
+    case 'move': {
+      const lane = str(flags, 'lane');
+      const index = int(flags, 'index');
+      const to = str(flags, 'to');
+      saveBoard(
+        file,
+        moveCard(loadBoard(file), { lane, index, to, pos: optionalInt(flags, 'pos') })
+      );
+      return `Moved card ${index} from "${lane}" to "${to}"`;
+    }
+
+    case 'done': {
+      const lane = str(flags, 'lane');
+      const index = int(flags, 'index');
+      const undo = flags.undo === true;
+      saveBoard(file, setDone(loadBoard(file), { lane, index, undo }));
+      return `Marked card ${index} in "${lane}" ${undo ? 'not done' : 'done'}`;
+    }
+
+    case 'rm': {
+      const lane = str(flags, 'lane');
+      const index = int(flags, 'index');
+      saveBoard(file, removeCard(loadBoard(file), { lane, index }));
+      return `Removed card ${index} from "${lane}"`;
+    }
+
+    default:
+      throw new UsageError(`Unknown command "${command}"`);
+  }
+}
+
+try {
+  console.log(run(process.argv.slice(2)));
+} catch (e) {
+  if (e instanceof UsageError) {
+    console.error(`${e.message}\n\n${usage}`);
+  } else if (e instanceof BoardError) {
+    console.error(e.message);
+  } else {
+    console.error((e as Error).message ?? String(e));
+  }
+  process.exit(1);
+}

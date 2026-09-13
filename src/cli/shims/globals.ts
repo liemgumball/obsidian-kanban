@@ -41,8 +41,8 @@ define(String.prototype, 'contains', function (this: string, target: string) {
 const store = new Map<string, string>();
 const localStorage = {
   getItem: (key: string) => (store.has(key) ? store.get(key) : null),
-  setItem: (key: string, value: string) => void store.set(key, String(value)),
-  removeItem: (key: string) => void store.delete(key),
+  setItem: (key: string, value: string): void => void store.set(key, String(value)),
+  removeItem: (key: string): void => void store.delete(key),
   clear: () => store.clear(),
 };
 
@@ -60,8 +60,8 @@ if (!g.app) {
     internalPlugins: { plugins: {} },
     workspace: { editorSuggest: { suggests: [] as any[] } },
     metadataCache: {
-      getFirstLinkpathDest: () => null,
-      getFileCache: () => null,
+      getFirstLinkpathDest: (): null => null,
+      getFileCache: (): null => null,
     },
     // Obsidian defaults to tab indentation; multi-line cards are written the
     // same way here so boards edited in either place stay byte-identical.

@@ -1,4 +1,4 @@
-import type { KanbanSettings } from 'src/Settings';
+import type { KanbanFormat, KanbanSettings } from 'src/Settings';
 import type { StateManager } from 'src/StateManager';
 import { frontmatterKey } from 'src/parsers/common';
 
@@ -44,7 +44,7 @@ export class StateManagerStub {
     const timeFormat = raw('time-format') || defaultTimeFormat;
 
     this.compiledSettings = {
-      [frontmatterKey]: raw(frontmatterKey as keyof KanbanSettings) || 'board',
+      [frontmatterKey]: (raw(frontmatterKey as keyof KanbanSettings) || 'board') as KanbanFormat,
       'date-format': dateFormat,
       'date-display-format': dateDisplayFormat,
       'date-time-display-format': `${dateDisplayFormat} ${timeFormat}`,
