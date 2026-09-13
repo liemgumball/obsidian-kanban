@@ -19,7 +19,15 @@ export class BoardError extends Error {}
  */
 export function mdToBoard(md: string, filePath: string): Board {
   const stateManager = createStateManager(filePath);
-  const { settings, frontmatter, ast } = parseMarkdown(stateManager, md);
+
+  let parsed: ReturnType<typeof parseMarkdown>;
+  try {
+    parsed = parseMarkdown(stateManager, md);
+  } catch (e) {
+    throw new BoardError(`Cannot parse ${filePath}: ${(e as Error).message}`);
+  }
+
+  const { settings, frontmatter, ast } = parsed;
 
   if (!settings[frontmatterKey] && !frontmatter[frontmatterKey]) {
     throw new BoardError(`${filePath} is not a Kanban board: no "${frontmatterKey}" frontmatter`);

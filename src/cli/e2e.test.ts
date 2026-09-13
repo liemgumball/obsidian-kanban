@@ -136,6 +136,16 @@ describe('errors', () => {
     expect(stderr).toContain('is not a Kanban board');
   });
 
+  it('exits 1 and names the file when it cannot be parsed', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kanban-cli-'));
+    const file = join(dir, 'notes.json');
+    writeFileSync(file, '{}');
+    const { status, stderr } = kanban(['list', file]);
+    expect(status).toBe(1);
+    expect(stderr).toContain(file);
+    expect(stderr).toContain('Error parsing frontmatter');
+  });
+
   it('exits 1 on an unknown lane and lists the valid ones', () => {
     const { status, stderr } = kanban(['add', board(), '--lane', 'Nope', '--text', 'x']);
     expect(status).toBe(1);
