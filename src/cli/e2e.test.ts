@@ -47,6 +47,7 @@ describe('kanban list', () => {
     const { stdout } = kanban(['list', board(), '--json']);
     expect(JSON.parse(stdout)[0]).toEqual({
       title: 'Todo',
+      maxItems: 0,
       cards: [
         { index: 0, title: 'First card', done: false },
         { index: 1, title: 'Second card', done: false },
@@ -75,6 +76,19 @@ describe('kanban list', () => {
     const { status, stdout } = kanban(['list', board(), '--archive']);
     expect(status).toBe(0);
     expect(stdout).toContain('(empty)');
+  });
+
+  it('shows a lane limit in the heading', () => {
+    const { stdout } = kanban(['list', board('metadata.md')]);
+    expect(stdout).toContain('## Inbox (3)');
+    expect(stdout).toContain('## Empty');
+  });
+
+  it('reports the lane limit in json', () => {
+    const { stdout } = kanban(['list', board('metadata.md'), '--json']);
+    const lanes = JSON.parse(stdout);
+    expect(lanes[0].maxItems).toBe(3);
+    expect(lanes[1].maxItems).toBe(0);
   });
 
   it('leaves the file untouched', () => {
@@ -147,6 +161,29 @@ describe('mutating commands', () => {
 
     expect(kanban(['rm', file, '--lane', 'Doing', '--index', '0']).status).toBe(0);
     expect(readFileSync(file, 'utf8')).not.toContain('Renamed');
+  });
+
+  it('sets a lane limit with --max-items', () => {
+    const file = board();
+    expect(kanban(['lane', 'add', file, '--name', 'Review', '--max-items', '4']).status).toBe(0);
+    expect(readFileSync(file, 'utf8')).toContain('## Review (4)');
+  });
+
+  it('refuses a lane name that a board would read as a limit', () => {
+    const file = board();
+    const before = readFileSync(file, 'utf8');
+    const { status, stderr } = kanban(['lane', 'add', file, '--name', 'Review (5)']);
+    expect(status).toBe(1);
+    expect(stderr).toContain('--max-items');
+    expect(readFileSync(file, 'utf8')).toBe(before);
+  });
+
+  it('removes a limited lane by its heading, and counts its cards', () => {
+    const file = board('metadata.md');
+    const { status, stdout } = kanban(['lane', 'rm', file, '--name', 'Inbox (3)']);
+    expect(status).toBe(0);
+    expect(stdout.trim()).toBe('Removed lane "Inbox (3)" and 6 cards');
+    expect(readFileSync(file, 'utf8')).not.toContain('## Inbox');
   });
 
   it('adds and removes lanes', () => {

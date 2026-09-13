@@ -46,13 +46,14 @@ describe('listBoard', () => {
     expect(listBoard(fixture('simple.md'))).toEqual([
       {
         title: 'Todo',
+        maxItems: 0,
         cards: [
           { index: 0, title: 'First card', done: false },
           { index: 1, title: 'Second card', done: false },
         ],
       },
-      { title: 'Doing', cards: [] },
-      { title: 'Done', cards: [{ index: 0, title: 'Finished card', done: true }] },
+      { title: 'Doing', maxItems: 0, cards: [] },
+      { title: 'Done', maxItems: 0, cards: [{ index: 0, title: 'Finished card', done: true }] },
     ]);
   });
 });
@@ -71,6 +72,43 @@ describe('listArchive', () => {
 
   it('does not report archived cards as lane cards', () => {
     expect(listBoard(fixture('settings.md')).map((l) => l.title)).toEqual(['Backlog', 'Done']);
+  });
+});
+
+describe('lane limits', () => {
+  it('reports a lane limit, and 0 for a lane without one', () => {
+    const lanes = listBoard(fixture('metadata.md'));
+    expect(lanes[0]).toMatchObject({ title: 'Inbox', maxItems: 3 });
+    expect(lanes[1]).toMatchObject({ title: 'Empty', maxItems: 0 });
+  });
+
+  it('sets a limit on a new lane', () => {
+    const next = addLane(fixture('simple.md'), { name: 'Review', maxItems: 4 });
+    expect(next.children[3].data.maxItems).toBe(4);
+    expect(boardToMd(next)).toContain('## Review (4)');
+  });
+
+  it('writes no limit when none is given', () => {
+    expect(boardToMd(addLane(fixture('simple.md'), { name: 'Review' }))).toContain('## Review\n');
+  });
+
+  it('refuses a name that a board would read as a limit', () => {
+    expect(() => addLane(fixture('simple.md'), { name: 'Review (5)' })).toThrow(
+      /ends with a lane limit/
+    );
+  });
+
+  it('addresses a limited lane by either the bare name or the heading', () => {
+    expect(
+      titles(addCard(fixture('metadata.md'), { lane: 'Inbox', text: 'a' }), 'Inbox')
+    ).toHaveLength(7);
+    const viaHeading = addCard(fixture('metadata.md'), { lane: 'Inbox (3)', text: 'a' });
+    expect(viaHeading.children[0].children).toHaveLength(7);
+  });
+
+  it('keeps the limit when a lane is removed from around it', () => {
+    const next = removeLane(fixture('metadata.md'), { name: 'Empty' });
+    expect(boardToMd(next)).toContain('## Inbox (3)');
   });
 });
 

@@ -32,7 +32,7 @@ kanban edit <file.md> --lane <name> --index <n> --text <text>
 kanban move <file.md> --lane <name> --index <n> --to <lane> [--pos <n>]
 kanban done <file.md> --lane <name> --index <n> [--undo]
 kanban rm   <file.md> --lane <name> --index <n>
-kanban lane add <file.md> --name <name> [--pos <n>]
+kanban lane add <file.md> --name <name> [--pos <n>] [--max-items <n>]
 kanban lane rm  <file.md> --name <name>
 ```
 
@@ -86,6 +86,41 @@ Lane names are matched exactly and case-sensitively. A missing lane name is an
 error, not a silent no-op. Obsidian allows two lanes to share a title; an
 ambiguous name is also an error, naming the indices that collide, rather than a
 guess at which lane you meant.
+
+## Lane limits
+
+A board stores a lane's card limit in its heading, as a number in parentheses:
+
+```
+## Inbox (3)
+```
+
+`list` prints the heading as the board writes it, and `--json` carries the limit
+as `maxItems` on each lane, `0` meaning no limit. A lane can be addressed by
+either form, so both of these reach the lane above:
+
+```sh
+kanban add Board.md --lane 'Inbox'     --text 'Triage this'
+kanban add Board.md --lane 'Inbox (3)' --text 'Triage this'
+```
+
+Set a limit when creating a lane:
+
+```sh
+kanban lane add Board.md --name Review --max-items 4     # writes "## Review (4)"
+```
+
+Passing the limit inside the name is an error. A board would read
+`--name 'Review (5)'` back as a lane named `Review` with a limit of 5, so the
+name you gave would not be the name you got:
+
+```
+Lane name "Review (5)" ends with a lane limit. Pass the name without it and set
+the limit with --max-items.
+```
+
+Nothing enforces a limit: it is a signal for the board's reader, and the plugin
+marks a lane whose card count exceeds it. `add` will not refuse a card.
 
 ## Output
 

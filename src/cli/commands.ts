@@ -14,6 +14,8 @@ export interface CardListing {
 
 export interface LaneListing {
   title: string;
+  /** Largest card count the lane wants, written as `## Title (n)`. 0 means none. */
+  maxItems: number;
   cards: CardListing[];
 }
 
@@ -28,6 +30,7 @@ function listCards(items: Item[]): CardListing[] {
 export function listBoard(board: Board): LaneListing[] {
   return board.children.map((lane) => ({
     title: lane.data.title,
+    maxItems: lane.data.maxItems ?? 0,
     cards: listCards(lane.children),
   }));
 }
@@ -145,7 +148,19 @@ function spliceCollapseState(board: Board, at: number, deleteCount: number, inse
   return update(board, { data: { settings: { 'list-collapse': { $set: next } } } });
 }
 
-export function addLane(board: Board, args: { name: string; pos?: number }): Board {
+export function addLane(
+  board: Board,
+  args: { name: string; pos?: number; maxItems?: number }
+): Board {
+  // A board stores a lane limit as `## Title (n)`, so a name in that shape would
+  // come back as a different name with a limit attached.
+  if (/\(\d+\)$/.test(args.name.trim())) {
+    throw new BoardError(
+      `Lane name "${args.name}" ends with a lane limit. ` +
+        'Pass the name without it and set the limit with --max-items.'
+    );
+  }
+
   if (board.children.some((lane) => lane.data.title === args.name)) {
     throw new BoardError(`There is already a lane named "${args.name}"`);
   }
@@ -154,7 +169,11 @@ export function addLane(board: Board, args: { name: string; pos?: number }): Boa
     ...LaneTemplate,
     id: generateInstanceId(),
     children: [],
-    data: { title: args.name, shouldMarkItemsComplete: false },
+    data: {
+      title: args.name,
+      maxItems: args.maxItems ?? 0,
+      shouldMarkItemsComplete: false,
+    },
   };
 
   const at = insertionIndex(board.children.length, args.pos);

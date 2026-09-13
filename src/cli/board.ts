@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'fs';
 import type { Board, Item, Lane } from 'src/components/types';
+import { laneTitleWithMaxItems } from 'src/helpers';
 import { frontmatterKey } from 'src/parsers/common';
 import {
   astToUnhydratedBoard,
@@ -107,13 +108,17 @@ export function reviseItem(board: Board, item: Item, text: string): Item {
 }
 
 export function findLane(board: Board, name: string): { lane: Lane; index: number } {
+  // `list` prints a lane's heading, limit included, so both forms resolve.
   const matches = board.children.reduce<number[]>((found, lane, index) => {
-    if (lane.data.title === name) found.push(index);
+    const heading = laneTitleWithMaxItems(lane.data.title, lane.data.maxItems);
+    if (lane.data.title === name || heading === name) found.push(index);
     return found;
   }, []);
 
   if (!matches.length) {
-    const known = board.children.map((lane) => lane.data.title);
+    const known = board.children.map((lane) =>
+      laneTitleWithMaxItems(lane.data.title, lane.data.maxItems)
+    );
     throw new BoardError(
       `No lane named "${name}". Lanes: ${known.length ? known.join(', ') : '(none)'}`
     );

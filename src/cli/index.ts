@@ -1,3 +1,5 @@
+import { laneTitleWithMaxItems } from 'src/helpers';
+
 import { BoardError, findLane, insertionIndex, loadBoard, saveBoard } from './board';
 import {
   addCard,
@@ -19,7 +21,7 @@ const usage = `kanban — edit Obsidian Kanban boards from the shell
   kanban move <file.md> --lane <name> --index <n> --to <lane> [--pos <n>]
   kanban done <file.md> --lane <name> --index <n> [--undo]
   kanban rm   <file.md> --lane <name> --index <n>
-  kanban lane add <file.md> --name <name> [--pos <n>]
+  kanban lane add <file.md> --name <name> [--pos <n>] [--max-items <n>]
   kanban lane rm  <file.md> --name <name>`;
 
 class UsageError extends Error {}
@@ -96,7 +98,9 @@ function formatLane(title: string, cards: ReturnType<typeof listArchive>): strin
 }
 
 function formatListing(board: ReturnType<typeof listBoard>): string {
-  return board.map((lane) => formatLane(lane.title, lane.cards)).join('\n\n');
+  return board
+    .map((lane) => formatLane(laneTitleWithMaxItems(lane.title, lane.maxItems), lane.cards))
+    .join('\n\n');
 }
 
 function run(argv: string[]): string {
@@ -112,12 +116,13 @@ function run(argv: string[]): string {
       throw new UsageError(`Unknown lane subcommand "${sub ?? ''}"`);
     }
 
-    const flags = parseFlags(args, sub === 'add' ? ['name', 'pos'] : ['name']);
+    const flags = parseFlags(args, sub === 'add' ? ['name', 'pos', 'max-items'] : ['name']);
 
     if (sub === 'add') {
       const name = str(flags, 'name');
       const pos = optionalInt(flags, 'pos');
-      const board = addLane(loadBoard(file), { name, pos });
+      const maxItems = optionalInt(flags, 'max-items');
+      const board = addLane(loadBoard(file), { name, pos, maxItems });
       saveBoard(file, board);
       return `Added lane "${name}" at ${board.children.findIndex((l) => l.data.title === name)}`;
     }
@@ -125,7 +130,7 @@ function run(argv: string[]): string {
     if (sub === 'rm') {
       const name = str(flags, 'name');
       const loaded = loadBoard(file);
-      const cards = loaded.children.find((l) => l.data.title === name)?.children.length ?? 0;
+      const cards = findLane(loaded, name).lane.children.length;
       saveBoard(file, removeLane(loaded, { name }));
       return `Removed lane "${name}" and ${cards} card${cards === 1 ? '' : 's'}`;
     }
