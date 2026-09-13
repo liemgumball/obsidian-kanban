@@ -25,6 +25,6 @@ title: Project board
 
 %% kanban:settings
 ```
-{"kanban-plugin":"board","show-checkboxes":true,"move-tags":true,"date-trigger":"@","time-trigger":"@@","list-collapse":[false,false]}
+{"kanban-plugin":"board","show-checkboxes":true,"move-tags":true,"date-trigger":"@","time-trigger":"@@","list-collapse":[false,true]}
 ```
 %%

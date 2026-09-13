@@ -90,6 +90,21 @@ export function moveCard(
   });
 }
 
+/**
+ * Mirrors the plugin: one `list-collapse` entry per lane, spliced at the lane's
+ * own index. Boards that do not carry the setting are left without it.
+ */
+function spliceCollapseState(board: Board, at: number, deleteCount: number, insert?: boolean) {
+  const collapsed = board.data.settings['list-collapse'];
+  if (!collapsed) return board;
+
+  const next = [...collapsed];
+  if (insert === undefined) next.splice(at, deleteCount);
+  else next.splice(at, deleteCount, insert);
+
+  return update(board, { data: { settings: { 'list-collapse': { $set: next } } } });
+}
+
 export function addLane(board: Board, args: { name: string; pos?: number }): Board {
   if (board.children.some((lane) => lane.data.title === args.name)) {
     throw new BoardError(`There is already a lane named "${args.name}"`);
@@ -104,11 +119,16 @@ export function addLane(board: Board, args: { name: string; pos?: number }): Boa
 
   const at = insertionIndex(board.children.length, args.pos);
 
-  return update(board, { children: { $splice: [[at, 0, lane]] } });
+  return spliceCollapseState(
+    update(board, { children: { $splice: [[at, 0, lane]] } }),
+    at,
+    0,
+    false
+  );
 }
 
 export function removeLane(board: Board, args: { name: string }): Board {
   const { index } = findLane(board, args.name);
 
-  return update(board, { children: { $splice: [[index, 1]] } });
+  return spliceCollapseState(update(board, { children: { $splice: [[index, 1]] } }), index, 1);
 }

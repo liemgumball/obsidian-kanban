@@ -185,6 +185,42 @@ describe('addLane', () => {
   });
 });
 
+describe('list-collapse', () => {
+  const collapse = (board: Board) => board.data.settings['list-collapse'];
+
+  it('inserts a collapse entry at the new lane position', () => {
+    expect(collapse(addLane(fixture('settings.md'), { name: 'New', pos: 1 }))).toEqual([
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  it('appends a collapse entry for an appended lane', () => {
+    expect(collapse(addLane(fixture('settings.md'), { name: 'New' }))).toEqual([
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  it('drops the collapse entry of a removed lane', () => {
+    expect(collapse(removeLane(fixture('settings.md'), { name: 'Backlog' }))).toEqual([true]);
+  });
+
+  it('stays absent on a board that does not use it', () => {
+    const next = addLane(fixture('simple.md'), { name: 'New' });
+    expect('list-collapse' in next.data.settings).toBe(false);
+    expect(boardToMd(next)).toContain('{"kanban-plugin":"board"}');
+  });
+
+  it('is written to the settings block', () => {
+    expect(boardToMd(removeLane(fixture('settings.md'), { name: 'Backlog' }))).toContain(
+      '"list-collapse":[true]'
+    );
+  });
+});
+
 describe('removeLane', () => {
   it('drops the lane and its cards', () => {
     const board = fixture('simple.md');
