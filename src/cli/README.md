@@ -26,7 +26,7 @@ node kanban-cli.js list ~/vault/Board.md
 ## Commands
 
 ```
-kanban list <file.md> [--json]
+kanban list <file.md> [--json] [--archive]
 kanban add  <file.md> --lane <name> --text <text> [--pos <n>]
 kanban edit <file.md> --lane <name> --index <n> --text <text>
 kanban move <file.md> --lane <name> --index <n> --to <lane> [--pos <n>]
@@ -112,6 +112,19 @@ of `{ index, title, done }`:
 ```
 
 `title` is the card's raw markdown, the same text `edit --text` takes.
+
+Archived cards live outside the lanes and are indexed separately, so
+`list --archive` prints them on their own:
+
+```
+## Archive
+   0 [x] Old card
+   1 [x] Older card
+```
+
+With `--json` it emits the bare card array, `{ index, title, done }` per entry.
+The default output is unaffected either way: archived cards never appear among
+the lanes.
 
 Mutating commands print a one-line confirmation and write the file in place.
 
@@ -208,5 +221,6 @@ not.
 ## Limits
 
 Out of scope, by design: board rendering, search and querying beyond a plain
-listing, archiving, templates, date and time pickers, tag colour handling,
+listing, archiving cards (`list --archive` reads the archive, but nothing writes
+to it), templates, date and time pickers, tag colour handling,
 talking to a running Obsidian instance, and multi-file or vault-wide operations.

@@ -8,6 +8,7 @@ import {
   addCard,
   addLane,
   editCard,
+  listArchive,
   listBoard,
   moveCard,
   removeCard,
@@ -53,6 +54,23 @@ describe('listBoard', () => {
       { title: 'Doing', cards: [] },
       { title: 'Done', cards: [{ index: 0, title: 'Finished card', done: true }] },
     ]);
+  });
+});
+
+describe('listArchive', () => {
+  it('reports archived cards with their own indices', () => {
+    expect(listArchive(fixture('settings.md'))).toEqual([
+      { index: 0, title: 'Old card', done: true },
+      { index: 1, title: 'Older card', done: true },
+    ]);
+  });
+
+  it('is empty on a board with no archive', () => {
+    expect(listArchive(fixture('simple.md'))).toEqual([]);
+  });
+
+  it('does not report archived cards as lane cards', () => {
+    expect(listBoard(fixture('settings.md')).map((l) => l.title)).toEqual(['Backlog', 'Done']);
   });
 });
 

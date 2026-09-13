@@ -6,20 +6,35 @@ import { getTaskStatusDone } from 'src/parsers/helpers/inlineMetadata';
 
 import { BoardError, createItem, findCard, findLane, insertionIndex, reviseItem } from './board';
 
+export interface CardListing {
+  index: number;
+  title: string;
+  done: boolean;
+}
+
 export interface LaneListing {
   title: string;
-  cards: Array<{ index: number; title: string; done: boolean }>;
+  cards: CardListing[];
+}
+
+function listCards(items: Item[]): CardListing[] {
+  return items.map((item, index) => ({
+    index,
+    title: item.data.titleRaw,
+    done: !!item.data.checked,
+  }));
 }
 
 export function listBoard(board: Board): LaneListing[] {
   return board.children.map((lane) => ({
     title: lane.data.title,
-    cards: lane.children.map((item, index) => ({
-      index,
-      title: item.data.titleRaw,
-      done: !!item.data.checked,
-    })),
+    cards: listCards(lane.children),
   }));
+}
+
+/** Archived cards, which live outside the lanes and are indexed separately. */
+export function listArchive(board: Board): CardListing[] {
+  return listCards(board.data.archive ?? []);
 }
 
 export function addCard(board: Board, args: { lane: string; text: string; pos?: number }): Board {

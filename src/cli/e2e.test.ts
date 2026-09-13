@@ -54,6 +54,29 @@ describe('kanban list', () => {
     });
   });
 
+  it('lists the archive with --archive', () => {
+    const { status, stdout } = kanban(['list', board('settings.md'), '--archive']);
+    expect(status).toBe(0);
+    expect(stdout).toContain('## Archive');
+    expect(stdout).toContain('   0 [x] Old card');
+    expect(stdout).toContain('   1 [x] Older card');
+    expect(stdout).not.toContain('## Backlog');
+  });
+
+  it('emits the archive as json', () => {
+    const { stdout } = kanban(['list', board('settings.md'), '--archive', '--json']);
+    expect(JSON.parse(stdout)).toEqual([
+      { index: 0, title: 'Old card', done: true },
+      { index: 1, title: 'Older card', done: true },
+    ]);
+  });
+
+  it('says so when a board has no archive', () => {
+    const { status, stdout } = kanban(['list', board(), '--archive']);
+    expect(status).toBe(0);
+    expect(stdout).toContain('(empty)');
+  });
+
   it('leaves the file untouched', () => {
     const file = board();
     const before = readFileSync(file, 'utf8');

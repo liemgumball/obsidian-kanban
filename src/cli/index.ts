@@ -3,6 +3,7 @@ import {
   addCard,
   addLane,
   editCard,
+  listArchive,
   listBoard,
   moveCard,
   removeCard,
@@ -12,7 +13,7 @@ import {
 
 const usage = `kanban — edit Obsidian Kanban boards from the shell
 
-  kanban list <file.md> [--json]
+  kanban list <file.md> [--json] [--archive]
   kanban add  <file.md> --lane <name> --text <text> [--pos <n>]
   kanban edit <file.md> --lane <name> --index <n> --text <text>
   kanban move <file.md> --lane <name> --index <n> --to <lane> [--pos <n>]
@@ -67,20 +68,19 @@ function indent(title: string): string {
   return title.split('\n').join('\n       ');
 }
 
+function formatLane(title: string, cards: ReturnType<typeof listArchive>): string {
+  const header = `## ${title}`;
+  if (!cards.length) return `${header}\n  (empty)`;
+
+  const lines = cards.map(
+    (card) => `  ${String(card.index).padStart(2)} [${card.done ? 'x' : ' '}] ${indent(card.title)}`
+  );
+
+  return [header, ...lines].join('\n');
+}
+
 function formatListing(board: ReturnType<typeof listBoard>): string {
-  return board
-    .map((lane) => {
-      const header = `## ${lane.title}`;
-      if (!lane.cards.length) return `${header}\n  (empty)`;
-
-      const cards = lane.cards.map(
-        (card) =>
-          `  ${String(card.index).padStart(2)} [${card.done ? 'x' : ' '}] ${indent(card.title)}`
-      );
-
-      return [header, ...cards].join('\n');
-    })
-    .join('\n\n');
+  return board.map((lane) => formatLane(lane.title, lane.cards)).join('\n\n');
 }
 
 function run(argv: string[]): string {
@@ -118,7 +118,14 @@ function run(argv: string[]): string {
 
   switch (command) {
     case 'list': {
-      const listing = listBoard(loadBoard(file));
+      const loaded = loadBoard(file);
+
+      if (flags.archive) {
+        const archived = listArchive(loaded);
+        return flags.json ? JSON.stringify(archived, null, 2) : formatLane('Archive', archived);
+      }
+
+      const listing = listBoard(loaded);
       return flags.json ? JSON.stringify(listing, null, 2) : formatListing(listing);
     }
 
