@@ -5,7 +5,7 @@ import { join, resolve } from 'path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 const root = resolve(__dirname, '../..');
-const cli = join(root, 'kanban-cli.js');
+const cli = join(root, 'bin/kanban-cli.js');
 
 interface Result {
   status: number;

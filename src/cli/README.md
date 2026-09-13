@@ -13,14 +13,14 @@ gap.
 
 ```sh
 yarn install
-yarn build:cli     # writes kanban-cli.js
+yarn build:cli     # writes bin/kanban-cli.js
 ```
 
 Run it directly, or link it onto your `PATH` as `kanban` via the `bin` entry in
 `package.json`:
 
 ```sh
-node kanban-cli.js list ~/vault/Board.md
+node bin/kanban-cli.js list ~/vault/Board.md
 ```
 
 ## Commands

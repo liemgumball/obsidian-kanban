@@ -21,7 +21,7 @@ export const cliAlias = {
 };
 
 const entry = process.argv[2] ?? 'src/cli/index.ts';
-const outfile = process.argv[3] ?? 'kanban-cli.js';
+const outfile = process.argv[3] ?? 'bin/kanban-cli.js';
 
 const out = path.resolve(root, outfile);
 

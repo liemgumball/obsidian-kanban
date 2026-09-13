@@ -15,4 +15,4 @@ dist
 test-vault/
 main.js
 styles.css
-kanban-cli.js
+bin/kanban-cli.js
