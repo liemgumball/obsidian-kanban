@@ -208,6 +208,55 @@ describe('errors', () => {
     expect(readFileSync(file, 'utf8')).toBe(before);
   });
 
+  it('exits 1 on an unknown flag instead of ignoring it', () => {
+    const { status, stderr } = kanban(['list', board(), '--jsno']);
+    expect(status).toBe(1);
+    expect(stderr).toContain('Unknown flag --jsno');
+  });
+
+  it('exits 1 on a repeated flag', () => {
+    const { status, stderr } = kanban([
+      'add',
+      board(),
+      '--lane',
+      'Todo',
+      '--lane',
+      'Done',
+      '--text',
+      'x',
+    ]);
+    expect(status).toBe(1);
+    expect(stderr).toContain('--lane given more than once');
+  });
+
+  it('exits 1 on empty text or an empty lane name', () => {
+    expect(kanban(['add', board(), '--lane', 'Todo', '--text', '']).stderr).toContain(
+      '--text cannot be empty'
+    );
+    expect(kanban(['lane', 'add', board(), '--name', '   ']).stderr).toContain(
+      '--name cannot be empty'
+    );
+  });
+
+  it('takes a value starting with -- via --flag=value', () => {
+    const file = board();
+    const { status, stdout } = kanban(['add', file, '--lane=Todo', '--text=--force is a flag']);
+    expect(status).toBe(0);
+    expect(stdout.trim()).toBe('Added card to "Todo" (2)');
+    expect(readFileSync(file, 'utf8')).toContain('- [ ] --force is a flag');
+  });
+
+  it('preserves CRLF line endings and a final newline', () => {
+    const file = board();
+    const crlf = readFileSync(file, 'utf8').replace(/\n/g, '\r\n') + '\r\n';
+    writeFileSync(file, crlf);
+    expect(kanban(['add', file, '--lane', 'Todo', '--text', 'Third']).status).toBe(0);
+    const after = readFileSync(file, 'utf8');
+    expect(after).toContain('- [ ] Third');
+    expect(/(?<!\r)\n/.test(after)).toBe(false);
+    expect(after.endsWith('\r\n')).toBe(true);
+  });
+
   it('exits 1 on a missing flag and prints usage', () => {
     const { status, stderr } = kanban(['add', board(), '--lane', 'Todo']);
     expect(status).toBe(1);

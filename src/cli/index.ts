@@ -26,21 +26,36 @@ class UsageError extends Error {}
 
 type Flags = Record<string, string | boolean>;
 
-function parseFlags(args: string[]): Flags {
+function parseFlags(args: string[], allowed: string[]): Flags {
   const flags: Flags = {};
+
+  const set = (name: string, value: string | boolean) => {
+    if (!allowed.includes(name)) {
+      throw new UsageError(`Unknown flag --${name}. Accepted here: ${allowed.join(', ')}`);
+    }
+    if (name in flags) throw new UsageError(`--${name} given more than once`);
+    flags[name] = value;
+  };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
     if (!arg.startsWith('--')) throw new UsageError(`Unexpected argument "${arg}"`);
 
+    // `--flag=value` is the way to pass a value that itself starts with `--`.
+    const eq = arg.indexOf('=');
+    if (eq > -1) {
+      set(arg.slice(2, eq), arg.slice(eq + 1));
+      continue;
+    }
+
     const name = arg.slice(2);
     const next = args[i + 1];
 
     if (next === undefined || next.startsWith('--')) {
-      flags[name] = true;
+      set(name, true);
     } else {
-      flags[name] = next;
+      set(name, next);
       i++;
     }
   }
@@ -51,6 +66,7 @@ function parseFlags(args: string[]): Flags {
 function str(flags: Flags, name: string): string {
   const value = flags[name];
   if (typeof value !== 'string') throw new UsageError(`Missing --${name}`);
+  if (!value.trim()) throw new UsageError(`--${name} cannot be empty`);
   return value;
 }
 
@@ -91,7 +107,12 @@ function run(argv: string[]): string {
   if (command === 'lane') {
     const [sub, file, ...args] = rest;
     if (!file) throw new UsageError('Missing board file');
-    const flags = parseFlags(args);
+
+    if (sub !== 'add' && sub !== 'rm') {
+      throw new UsageError(`Unknown lane subcommand "${sub ?? ''}"`);
+    }
+
+    const flags = parseFlags(args, sub === 'add' ? ['name', 'pos'] : ['name']);
 
     if (sub === 'add') {
       const name = str(flags, 'name');
@@ -108,13 +129,22 @@ function run(argv: string[]): string {
       saveBoard(file, removeLane(loaded, { name }));
       return `Removed lane "${name}" and ${cards} card${cards === 1 ? '' : 's'}`;
     }
-
-    throw new UsageError(`Unknown lane subcommand "${sub ?? ''}"`);
   }
+
+  const allowed: Record<string, string[]> = {
+    list: ['json', 'archive'],
+    add: ['lane', 'text', 'pos'],
+    edit: ['lane', 'index', 'text'],
+    move: ['lane', 'index', 'to', 'pos'],
+    done: ['lane', 'index', 'undo'],
+    rm: ['lane', 'index'],
+  };
+
+  if (!allowed[command]) throw new UsageError(`Unknown command "${command}"`);
 
   const [file, ...args] = rest;
   if (!file) throw new UsageError('Missing board file');
-  const flags = parseFlags(args);
+  const flags = parseFlags(args, allowed[command]);
 
   switch (command) {
     case 'list': {
@@ -175,9 +205,6 @@ function run(argv: string[]): string {
       saveBoard(file, removeCard(loadBoard(file), { lane, index }));
       return `Removed card ${index} from "${lane}"`;
     }
-
-    default:
-      throw new UsageError(`Unknown command "${command}"`);
   }
 }
 

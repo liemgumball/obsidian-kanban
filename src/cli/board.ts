@@ -38,6 +38,27 @@ export function mdToBoard(md: string, filePath: string): Board {
 
 export { boardToMd };
 
+/**
+ * `boardToMd` always emits LF and never a final newline. Obsidian vaults are
+ * edited on every platform, so writing that shape back over a CRLF board would
+ * rewrite every line of the file. These carry the original file's conventions
+ * onto the new markdown instead.
+ */
+function matchLineEndings(md: string, original: string): string {
+  const lf = md.replace(/\r\n/g, '\n');
+  return original.includes('\r\n') ? lf.replace(/\n/g, '\r\n') : lf;
+}
+
+function finalNewline(md: string, original: string): string {
+  if (!/\r?\n$/.test(original) || /\r?\n$/.test(md)) return '';
+  return original.includes('\r\n') ? '\r\n' : '\n';
+}
+
+export function serializeBoard(board: Board, original: string): string {
+  const md = boardToMd(board);
+  return matchLineEndings(md, original) + finalNewline(md, original);
+}
+
 export function loadBoard(filePath: string): Board {
   let md: string;
 
@@ -52,11 +73,21 @@ export function loadBoard(filePath: string): Board {
 
 /**
  * Serializes first, writes second, so a serialization failure leaves the
- * original file untouched.
+ * original file untouched. The file on disk is re-read only to copy its line
+ * endings and final newline; a board that has gone missing falls back to the
+ * serializer's own shape rather than failing the write.
  */
 export function saveBoard(filePath: string, board: Board): void {
   const md = boardToMd(board);
-  writeFileSync(filePath, md, 'utf8');
+
+  let original = '';
+  try {
+    original = readFileSync(filePath, 'utf8');
+  } catch {
+    // Nothing to match; write the serializer's own shape.
+  }
+
+  writeFileSync(filePath, matchLineEndings(md, original) + finalNewline(md, original), 'utf8');
 }
 
 function stateManagerFor(board: Board) {

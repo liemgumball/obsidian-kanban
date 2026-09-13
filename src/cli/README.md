@@ -57,6 +57,14 @@ kanban done Board.md --lane Done --index 0
 kanban lane add Board.md --name Blocked --pos 1
 ```
 
+Unknown flags, repeated flags, and empty `--text` or `--name` values are all
+errors rather than silent surprises. To pass a value that itself begins with
+`--`, use `--flag=value`:
+
+```sh
+kanban add Board.md --lane=Todo --text=--force is a flag
+```
+
 Card text is passed through verbatim, so tags, dates, times, wikilinks, and
 multi-line bodies all work:
 
@@ -190,6 +198,11 @@ The central guarantee is a round-trip property: for every fixture board,
 property guards every command against silent corruption of the parts of a board
 it did not intend to touch. Multi-line cards are indented with tabs, matching
 Obsidian's default.
+
+A board's own file conventions are carried through a write: CRLF line endings
+stay CRLF, and a final newline is kept if the file had one and not added if it
+did not. Without that, editing a board saved on Windows would rewrite every line
+of the file.
 
 `list-collapse` is kept in step with the lanes: `lane add` and `lane rm` splice
 its entry at the lane's own index, the same way the plugin does. Boards whose
