@@ -76,14 +76,26 @@ export function reviseItem(board: Board, item: Item, text: string): Item {
 }
 
 export function findLane(board: Board, name: string): { lane: Lane; index: number } {
-  const index = board.children.findIndex((lane) => lane.data.title === name);
+  const matches = board.children.reduce<number[]>((found, lane, index) => {
+    if (lane.data.title === name) found.push(index);
+    return found;
+  }, []);
 
-  if (index < 0) {
+  if (!matches.length) {
     const known = board.children.map((lane) => lane.data.title);
     throw new BoardError(
       `No lane named "${name}". Lanes: ${known.length ? known.join(', ') : '(none)'}`
     );
   }
+
+  // Obsidian allows two lanes to share a title. Guessing which one was meant
+  // would silently edit the wrong lane.
+  if (matches.length > 1) {
+    const list = matches.slice(0, -1).join(', ') + ' and ' + matches[matches.length - 1];
+    throw new BoardError(`Lane name "${name}" is ambiguous: lanes ${list} share it`);
+  }
+
+  const index = matches[0];
 
   return { lane: board.children[index], index };
 }

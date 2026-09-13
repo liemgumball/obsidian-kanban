@@ -20,6 +20,12 @@ function fixture(name: string): Board {
   return mdToBoard(readFileSync(path, 'utf8'), path);
 }
 
+/** A board whose lane titles are not unique; Obsidian allows this. */
+function ambiguousBoard(): Board {
+  const md = readFileSync(join(__dirname, '__fixtures__', 'simple.md'), 'utf8');
+  return mdToBoard(md.replace('## Doing', '## Todo'), 'dup.md');
+}
+
 function titles(board: Board, lane: string): string[] {
   return board.children
     .find((l) => l.data.title === lane)
@@ -182,6 +188,65 @@ describe('addLane', () => {
 
   it('rejects a duplicate name', () => {
     expect(() => addLane(board, { name: 'Todo' })).toThrow(/already a lane named "Todo"/);
+  });
+});
+
+describe('ambiguous lane names', () => {
+  it('refuses to guess which lane was meant', () => {
+    expect(() => addCard(ambiguousBoard(), { lane: 'Todo', text: 'x' })).toThrow(
+      /Lane name "Todo" is ambiguous: lanes 0 and 1/
+    );
+  });
+
+  it('refuses on the destination of a move', () => {
+    expect(() => moveCard(ambiguousBoard(), { lane: 'Done', index: 0, to: 'Todo' })).toThrow(
+      /ambiguous/
+    );
+  });
+
+  it('refuses on lane removal', () => {
+    expect(() => removeLane(ambiguousBoard(), { name: 'Todo' })).toThrow(/ambiguous/);
+  });
+
+  it('still resolves an unambiguous lane on the same board', () => {
+    expect(titles(addCard(ambiguousBoard(), { lane: 'Done', text: 'x' }), 'Done')).toEqual([
+      'Finished card',
+      'x',
+    ]);
+  });
+});
+
+describe('moving in and out of a Complete lane', () => {
+  let board: Board;
+  beforeEach(() => (board = fixture('simple.md')));
+
+  it('checks a card moved into the Complete lane', () => {
+    const next = moveCard(board, { lane: 'Todo', index: 0, to: 'Done' });
+    expect(next.children[2].children[1].data.checked).toBe(true);
+    expect(boardToMd(next)).toContain('- [x] First card');
+  });
+
+  it('unchecks a card moved out of the Complete lane', () => {
+    const next = moveCard(board, { lane: 'Done', index: 0, to: 'Todo' });
+    expect(next.children[0].children[2].data.checked).toBe(false);
+    expect(boardToMd(next)).toContain('- [ ] Finished card');
+  });
+
+  it('leaves a card alone when neither lane is Complete', () => {
+    const next = moveCard(board, { lane: 'Todo', index: 0, to: 'Doing' });
+    expect(next.children[1].children[0].data.checked).toBe(false);
+    expect(boardToMd(next)).toContain('- [ ] First card');
+  });
+
+  it('does not re-toggle a card that already matches', () => {
+    const checked = setDone(board, { lane: 'Todo', index: 0 });
+    const next = moveCard(checked, { lane: 'Todo', index: 0, to: 'Done' });
+    expect(next.children[2].children[1].data.checkChar).toBe('x');
+  });
+
+  it('leaves check state alone when reordering within one lane', () => {
+    const next = moveCard(board, { lane: 'Done', index: 0, to: 'Done', pos: 0 });
+    expect(next.children[2].children[0].data.checked).toBe(true);
   });
 });
 

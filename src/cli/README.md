@@ -75,7 +75,9 @@ one. Lane name plus index is stable within a single board state and is what
 `list` prints, so the two commands compose.
 
 Lane names are matched exactly and case-sensitively. A missing lane name is an
-error, not a silent no-op.
+error, not a silent no-op. Obsidian allows two lanes to share a title; an
+ambiguous name is also an error, naming the indices that collide, rather than a
+guess at which lane you meant.
 
 ## Output
 

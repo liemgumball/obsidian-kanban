@@ -71,6 +71,29 @@ describe('mutating commands', () => {
     expect(readFileSync(file, 'utf8')).toContain('- [ ] Second card\n- [ ] Third card\n');
   });
 
+  it('reports where a clamped --pos actually landed', () => {
+    const file = board();
+    const { stdout } = kanban(['add', file, '--lane', 'Todo', '--text', 'Last', '--pos', '99']);
+    expect(stdout.trim()).toBe('Added card to "Todo" (2)');
+    expect(readFileSync(file, 'utf8')).toContain('- [ ] Second card\n- [ ] Last\n');
+  });
+
+  it('checks a card moved into the Complete lane', () => {
+    const file = board();
+    kanban(['move', file, '--lane', 'Todo', '--index', '0', '--to', 'Done']);
+    expect(readFileSync(file, 'utf8')).toContain('- [x] First card');
+  });
+
+  it('exits 1 on an ambiguous lane name', () => {
+    const file = board();
+    writeFileSync(file, readFileSync(file, 'utf8').replace('## Doing', '## Todo'));
+    const before = readFileSync(file, 'utf8');
+    const { status, stderr } = kanban(['add', file, '--lane', 'Todo', '--text', 'x']);
+    expect(status).toBe(1);
+    expect(stderr).toContain('Lane name "Todo" is ambiguous: lanes 0 and 1 share it');
+    expect(readFileSync(file, 'utf8')).toBe(before);
+  });
+
   it('changes nothing else in the file', () => {
     const file = board();
     const before = readFileSync(file, 'utf8');

@@ -1,4 +1,4 @@
-import { BoardError, loadBoard, saveBoard } from './board';
+import { BoardError, findLane, insertionIndex, loadBoard, saveBoard } from './board';
 import {
   addCard,
   addLane,
@@ -124,14 +124,16 @@ function run(argv: string[]): string {
 
     case 'add': {
       const lane = str(flags, 'lane');
-      const board = addCard(loadBoard(file), {
-        lane,
-        text: str(flags, 'text'),
-        pos: optionalInt(flags, 'pos'),
-      });
+      const text = str(flags, 'text');
+      const loaded = loadBoard(file);
+      const board = addCard(loaded, { lane, text, pos: optionalInt(flags, 'pos') });
       saveBoard(file, board);
-      const at = board.children.find((l) => l.data.title === lane).children.length - 1;
-      return `Added card to "${lane}" (${flags.pos === undefined ? at : flags.pos})`;
+      // Report where the card actually landed: --pos is clamped to the lane.
+      const at = insertionIndex(
+        findLane(loaded, lane).lane.children.length,
+        optionalInt(flags, 'pos')
+      );
+      return `Added card to "${lane}" (${at})`;
     }
 
     case 'edit': {

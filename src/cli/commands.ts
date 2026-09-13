@@ -1,6 +1,6 @@
 import update from 'immutability-helper';
 import { generateInstanceId } from 'src/components/helpers';
-import type { Board, Lane } from 'src/components/types';
+import type { Board, Item, Lane } from 'src/components/types';
 import { LaneTemplate } from 'src/components/types';
 import { getTaskStatusDone } from 'src/parsers/helpers/inlineMetadata';
 
@@ -72,12 +72,37 @@ export function setDone(
   });
 }
 
+/**
+ * Mirrors maybeCompleteForMove in src/components/helpers.ts: a card moved into
+ * a lane marked `**Complete**` is checked, and one moved out is unchecked. The
+ * plugin's Tasks-plugin branch is dropped, since the CLI has no plugins.
+ */
+function completeForMove(item: Item, from: Lane, to: Lane): Item {
+  const wasComplete = !!from.data.shouldMarkItemsComplete;
+  const shouldComplete = !!to.data.shouldMarkItemsComplete;
+
+  if (!wasComplete && !shouldComplete) return item;
+
+  const isComplete = !!item.data.checked && item.data.checkChar === getTaskStatusDone();
+  if (shouldComplete === isComplete) return item;
+
+  return update(item, {
+    data: {
+      checked: { $set: shouldComplete },
+      checkChar: { $set: shouldComplete ? getTaskStatusDone() : ' ' },
+    },
+  });
+}
+
 export function moveCard(
   board: Board,
   args: { lane: string; index: number; to: string; pos?: number }
 ): Board {
-  const { laneIndex: fromLane, item } = findCard(board, args.lane, args.index);
-  const { index: toLane } = findLane(board, args.to);
+  const { laneIndex: fromLane, lane: from, item } = findCard(board, args.lane, args.index);
+  const { index: toLane, lane: to } = findLane(board, args.to);
+
+  // Reordering within one lane must not touch the card's check state.
+  const moved = fromLane === toLane ? item : completeForMove(item, from, to);
 
   const removed = update(board, {
     children: { [fromLane]: { children: { $splice: [[args.index, 1]] } } },
@@ -86,7 +111,7 @@ export function moveCard(
   const at = insertionIndex(removed.children[toLane].children.length, args.pos);
 
   return update(removed, {
-    children: { [toLane]: { children: { $splice: [[at, 0, item]] } } },
+    children: { [toLane]: { children: { $splice: [[at, 0, moved]] } } },
   });
 }
 
