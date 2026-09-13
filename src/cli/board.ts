@@ -1,7 +1,12 @@
 import { readFileSync, writeFileSync } from 'fs';
-import type { Board } from 'src/components/types';
+import type { Board, Item, Lane } from 'src/components/types';
 import { frontmatterKey } from 'src/parsers/common';
-import { astToUnhydratedBoard, boardToMd } from 'src/parsers/formats/list';
+import {
+  astToUnhydratedBoard,
+  boardToMd,
+  newItem,
+  updateItemContent,
+} from 'src/parsers/formats/list';
 import { parseMarkdown } from 'src/parsers/parseMarkdown';
 
 import { createStateManager } from './stateManagerStub';
@@ -44,4 +49,59 @@ export function loadBoard(filePath: string): Board {
 export function saveBoard(filePath: string, board: Board): void {
   const md = boardToMd(board);
   writeFileSync(filePath, md, 'utf8');
+}
+
+function stateManagerFor(board: Board) {
+  const stateManager = createStateManager(board.id);
+  (stateManager as any).compileSettings(board.data.settings);
+  return stateManager;
+}
+
+/** Builds an `Item` from card text, using the board's own settings. */
+export function createItem(board: Board, text: string, checkChar = ' '): Item {
+  return newItem(stateManagerFor(board), text, checkChar);
+}
+
+/** Replaces a card's text, keeping its block id. */
+export function reviseItem(board: Board, item: Item, text: string): Item {
+  return updateItemContent(stateManagerFor(board), item, text);
+}
+
+export function findLane(board: Board, name: string): { lane: Lane; index: number } {
+  const index = board.children.findIndex((lane) => lane.data.title === name);
+
+  if (index < 0) {
+    const known = board.children.map((lane) => lane.data.title);
+    throw new BoardError(
+      `No lane named "${name}". Lanes: ${known.length ? known.join(', ') : '(none)'}`
+    );
+  }
+
+  return { lane: board.children[index], index };
+}
+
+export function findCard(
+  board: Board,
+  laneName: string,
+  index: number
+): { lane: Lane; laneIndex: number; item: Item } {
+  const { lane, index: laneIndex } = findLane(board, laneName);
+
+  if (!Number.isInteger(index) || index < 0 || index >= lane.children.length) {
+    throw new BoardError(
+      `No card at index ${index} in lane "${laneName}". Valid indices: ` +
+        (lane.children.length ? `0-${lane.children.length - 1}` : '(lane is empty)')
+    );
+  }
+
+  return { lane, laneIndex, item: lane.children[index] };
+}
+
+/** Clamps an insertion position to the bounds of a list; undefined appends. */
+export function insertionIndex(length: number, pos?: number): number {
+  if (pos === undefined) return length;
+  if (!Number.isInteger(pos) || pos < 0) {
+    throw new BoardError(`Position must be a non-negative integer, got "${pos}"`);
+  }
+  return Math.min(pos, length);
 }

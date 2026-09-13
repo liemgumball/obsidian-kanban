@@ -58,6 +58,7 @@ if (!g.app) {
   g.app = {
     plugins: { plugins: {}, enabledPlugins: new Set<string>() },
     internalPlugins: { plugins: {} },
+    workspace: { editorSuggest: { suggests: [] as any[] } },
     metadataCache: {
       getFirstLinkpathDest: () => null,
       getFileCache: () => null,
