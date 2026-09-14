@@ -62,7 +62,7 @@ errors rather than silent surprises. To pass a value that itself begins with
 `--`, use `--flag=value`:
 
 ```sh
-kanban add Board.md --lane=Todo --text=--force is a flag
+kanban add Board.md --lane=Todo --text='--force is a flag'
 ```
 
 Card text is passed through verbatim, so tags, dates, times, wikilinks, and
@@ -140,12 +140,13 @@ Text is the default:
 ```
 
 `list --json` emits an array of lanes, each with a `title` and a `cards` array
-of `{ index, title, done }`:
+of `{ index, title, done }`, plus the lane's `maxItems`:
 
 ```json
 [
   {
     "title": "Todo",
+    "maxItems": 0,
     "cards": [
       { "index": 0, "title": "First card", "done": false },
       { "index": 1, "title": "Second card", "done": false }
