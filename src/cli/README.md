@@ -267,6 +267,22 @@ New fixtures must be in the serializer's canonical form, which is what the
 plugin itself writes. The round-trip test will show the difference if they are
 not.
 
+## Agent skill
+
+`skills/kanban/` is a [Claude Code skill](https://docs.claude.com/en/docs/claude-code/skills)
+that teaches a coding agent the rules above: the addressing model, the quoting
+rules, and what each error message means. Install it for your own boards:
+
+```sh
+cp -r skills/kanban ~/.claude/skills/
+```
+
+Or symlink it instead, to follow the repo:
+
+```sh
+ln -s "$PWD/skills/kanban" ~/.claude/skills/kanban
+```
+
 ## Limits
 
 Out of scope, by design: board rendering, search and querying beyond a plain

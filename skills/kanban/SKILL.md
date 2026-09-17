@@ -18,19 +18,24 @@ writes stay byte-identical apart from the intended change, so it is always the r
 a board — editing the markdown by hand risks breaking the settings block, the archive, or the
 plugin's canonical spacing.
 
-Source lives in `src/cli/`; `src/cli/README.md` is the full reference.
+The source lives in `src/cli/` in the obsidian-kanban repo, and `src/cli/README.md` there is the
+full reference.
 
 ## Running it
 
-Build first if `bin/kanban-cli.js` is missing — it is gitignored:
+```sh
+kanban list "<file.md>"
+```
+
+Inside a checkout of the repo, `kanban` may not be on PATH. Build the bundle and call it directly
+— `bin/kanban-cli.js` is gitignored, so it may be missing:
 
 ```sh
 yarn build:cli
 node bin/kanban-cli.js list "<file.md>"
 ```
 
-If `kanban` is already on PATH, use that instead; the two are the same bundle. Examples below
-write `kanban`.
+Both are the same bundle. Examples below write `kanban`.
 
 ## Find the board first
 

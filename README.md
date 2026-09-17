@@ -19,4 +19,4 @@ Find the plugin documentation here: [Obsidian Kanban Plugin Documentation](https
 
 ## Command line
 
-Boards can also be edited from the shell, without running Obsidian: [Kanban CLI](src/cli/README.md)
+Boards can also be edited from the shell, without running Obsidian: [Kanban CLI](src/cli/README.md). Coding agents can drive it through the skill in [`skills/kanban`](skills/kanban/SKILL.md).
